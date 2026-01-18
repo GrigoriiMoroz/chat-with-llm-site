@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 app = FastAPI()
 
 # Serve static files
+# “When someone requests /static/*, serve files from the static/ folder.”
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Main page
