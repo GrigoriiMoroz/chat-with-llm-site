@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Chat</title>
+    <!-- Link to our CSS file -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Main container for the entire chat interface -->
+    <div class="chat-container">
+        <!-- Header section -->
+        <div class="header">
+            <h1>🤖 Chat with LLaMA</h1>
+            <p>Powered by Hugging Face</p>
+        </div>
+
+        <!-- Messages display area -->
+        <div id="messages" class="messages">
+            <div class="message bot-message">
+                <strong>Assistant:</strong> Hello! I'm ready to chat. Ask me anything!
+            </div>
+        </div>
+
+        <!-- Input area -->
+        <div class="input-container">
+            <input
+                type="text"
+                id="user-input"
+                placeholder="Type your message here..."
+                autocomplete="off"
+            >
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <!-- JavaScript file (logic added in Phase 4) -->
+    <script src="/static/script.js"></script>
+</body>
+</html>

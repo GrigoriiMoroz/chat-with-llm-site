@@ -1,18 +1,21 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Create the FastAPI application instance
 # This is the core object that handles all routing and requests
 app = FastAPI()
 
-# Define a route using a decorator
-# @app.get() means "when someone makes a GET request to this path..."
+# Serve static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Main page
+# После того как я добавил отвечать этим респонсом, появился HTML интерфейс
 @app.get("/")
 def read_root():
-    """
-    Root endpoint - the homepage
-    Returns a simple JSON message
-    """
-    return {"message": "Welcome to the LLM Chat API"}
+    """Serve the chat UI"""
+    return FileResponse("static/index.html")
+
 
 @app.get("/hello")
 def hello():
