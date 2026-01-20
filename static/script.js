@@ -1,63 +1,63 @@
-// ==================== DOM ELEMENT REFERENCES ====================
-// Get references to HTML elements we'll need to interact with
+// ==================== ССЫЛКИ НА DOM ЭЛЕМЕНТЫ ====================
+// Получаем ссылки на HTML элементы, с которыми будем взаимодействовать
 
 const messagesContainer = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-btn');
 
-// ==================== HELPER FUNCTIONS ====================
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 
 /**
- * Add a message to the chat UI
- * @param {string} content - The message text to display
- * @param {boolean} isUser - True if message is from user, false if from bot
+ * Добавить сообщение в UI чата
+ * @param {string} content - Текст сообщения для отображения
+ * @param {boolean} isUser - True если сообщение от пользователя, false если от бота
  */
 function addMessage(content, isUser) {
-    // Create a new div element for the message
+    // Создаём новый div элемент для сообщения
     const messageDiv = document.createElement('div');
 
-    // Add the base 'message' class and either
-    // 'user-message' or 'bot-message'
+    // Добавляем базовый класс 'message' и либо
+    // 'user-message' или 'bot-message'
     messageDiv.classList.add('message');
     messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
 
-    // Set the message content
-    // For bot messages, add "Assistant:" prefix
+    // Устанавливаем содержимое сообщения
+    // Для сообщений бота добавляем префикс "Assistant:"
     if (isUser) {
         messageDiv.textContent = content;
     } else {
         messageDiv.innerHTML = `<strong>Assistant:</strong> ${content}`;
     }
 
-    // Add the message to the messages container
+    // Добавляем сообщение в контейнер сообщений
     messagesContainer.appendChild(messageDiv);
 
-    // Auto-scroll to show the latest message
-    // scrollTop = how far scrolled down
-    // scrollHeight = total height of content
+    // Автоматическая прокрутка для показа последнего сообщения
+    // scrollTop = насколько прокручено вниз
+    // scrollHeight = общая высота контента
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
 /**
- * Send a message to the backend and display the response
+ * Отправить сообщение на backend и отобразить ответ
  */
 async function sendMessage() {
-    // Get the user's message from the input field
+    // Получаем сообщение пользователя из поля ввода
     const message = userInput.value.trim();
 
-    // Don't send empty messages
+    // Не отправляем пустые сообщения
     if (!message) {
         return;
     }
 
-    // Add user message to the UI immediately
+    // Добавляем сообщение пользователя в UI сразу
     addMessage(message, true);
 
-    // Clear the input field
+    // Очищаем поле ввода
     userInput.value = '';
 
     try {
-        // Send POST request to the /chat endpoint
+        // Отправляем POST запрос на эндпоинт /chat
         const response = await fetch('/chat', {
             method: 'POST',
             headers: {
@@ -66,39 +66,39 @@ async function sendMessage() {
             body: JSON.stringify({ message: message }),
         });
 
-        // Check if the request was successful
+        // Проверяем, был ли запрос успешным
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP ошибка! статус: ${response.status}`);
         }
 
-        // Parse the JSON response
+        // Парсим JSON ответ
         const data = await response.json();
 
-        // Add the bot's response to the UI
+        // Добавляем ответ бота в UI
         addMessage(data.response, false);
 
     } catch (error) {
-        // If something goes wrong, show an error message
-        console.error('Error:', error);
+        // Если что-то пошло не так, показываем сообщение об ошибке
+        console.error('Ошибка:', error);
         addMessage(
-            'Sorry, something went wrong. Please try again.',
+            'Извините, что-то пошло не так. Попробуйте снова.',
             false
         );
     }
 }
 
-// ==================== EVENT LISTENERS ====================
+// ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
 
-// Listen for clicks on the Send button
+// Слушаем клики на кнопку Send
 sendButton.addEventListener('click', sendMessage);
 
-// Listen for Enter key press in the input field
+// Слушаем нажатие клавиши Enter в поле ввода
 userInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
         sendMessage();
     }
 });
 
-// ==================== INITIALIZATION ====================
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
-console.log('Chat interface ready!');
+console.log('Интерфейс чата готов!');

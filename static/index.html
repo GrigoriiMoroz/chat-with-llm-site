@@ -1,41 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Chat</title>
-    <!-- Link to our CSS file -->
+    <title>LLM Чат</title>
+    <!-- Ссылка на наш CSS файл -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Main container for the entire chat interface -->
+    <!-- Главный контейнер для всего интерфейса чата -->
     <div class="chat-container">
-        <!-- Header section -->
+        <!-- Секция заголовка -->
         <div class="header">
-            <h1>🤖 Chat with LLaMA</h1>
-            <p>Powered by Hugging Face</p>
+            <h1>🤖 Чат с LLaMA</h1>
+            <p>Работает на Hugging Face</p>
         </div>
 
-        <!-- Messages display area -->
+        <!-- Область отображения сообщений -->
         <div id="messages" class="messages">
             <div class="message bot-message">
-                <strong>Assistant:</strong> Hello! I'm ready to chat. Ask me anything!
+                <strong>Ассистент:</strong> Привет! Я готов к общению. Спрашивай что угодно!
             </div>
         </div>
 
-        <!-- Input area -->
+        <!-- Область ввода -->
         <div class="input-container">
             <input
                 type="text"
                 id="user-input"
-                placeholder="Type your message here..."
+                placeholder="Введите ваше сообщение здесь..."
                 autocomplete="off"
             >
-            <button id="send-btn">Send</button>
+            <button id="send-btn">Отправить</button>
         </div>
     </div>
 
-    <!-- JavaScript file (logic added in Phase 4) -->
+    <!-- JavaScript файл (логика добавлена в Фазе 4) -->
     <script src="/static/script.js"></script>
 </body>
 </html>

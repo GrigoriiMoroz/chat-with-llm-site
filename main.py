@@ -7,72 +7,72 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-# ==================== SETUP ====================
+# ==================== НАСТРОЙКА ====================
 
-# Configure logging to see what's happening
+# Настройка логирования для отслеживания процессов
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file
+# Загрузка переменных окружения из файла .env
 load_dotenv()
 
-# Get API key from environment
+# Получение API ключа из переменных окружения
 HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
 if not HUGGING_FACE_API_KEY:
-    raise ValueError("HUGGING_FACE_API_KEY not found in environment variables!")
+    raise ValueError("HUGGING_FACE_API_KEY не найден в переменных окружения!")
 
-# Model to use for chat - using meta-llama (original choice)
+# Модель для чата - используем meta-llama (оригинальный выбор)
 MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
-# Router endpoint - OpenAI-compatible chat completions API
+# Endpoint роутера - OpenAI-совместимый API для chat completions
 API_URL = "https://router.huggingface.co/v1/chat/completions"
 
-# ==================== APP SETUP ====================
+# ==================== НАСТРОЙКА ПРИЛОЖЕНИЯ ====================
 
-# Create the FastAPI application instance
+# Создание экземпляра FastAPI приложения
 app = FastAPI()
 
-# Serve static files (HTML, CSS, JavaScript)
+# Подключение статических файлов (HTML, CSS, JavaScript)
 app.mount(
     "/static",
     StaticFiles(directory="static"),
     name="static",
 )
 
-# ==================== DATA MODELS ====================
+# ==================== МОДЕЛИ ДАННЫХ ====================
 
 class ChatRequest(BaseModel):
-    """Model for incoming chat request"""
+    """Модель для входящего запроса чата"""
     message: str
 
 
 class ChatResponse(BaseModel):
-    """Model for outgoing chat response"""
+    """Модель для исходящего ответа чата"""
     response: str
 
 
-# ==================== LLM FUNCTION ====================
+# ==================== ФУНКЦИЯ LLM ====================
 
 async def call_llm(user_message: str) -> str:
     """
-    Generate a response using Hugging Face Inference API directly.
+    Генерация ответа с использованием Hugging Face Inference API.
 
     Args:
-        user_message: The user's input message
+        user_message: Входящее сообщение пользователя
 
     Returns:
-        The LLM's generated response
+        Сгенерированный ответ LLM
 
     Raises:
-        ValueError: For user-facing errors (shown in chat)
+        ValueError: Для ошибок, отображаемых пользователю (показываются в чате)
     """
-    logger.info(f"Generating response for: {user_message[:50]}...")
+    logger.info(f"Генерация ответа для: {user_message[:50]}...")
 
     headers = {
         "Authorization": f"Bearer {HUGGING_FACE_API_KEY}",
         "Content-Type": "application/json",
     }
 
-    # OpenAI-compatible format
+    # Формат, совместимый с OpenAI
     payload = {
         "model": MODEL_NAME,
         "messages": [
@@ -116,56 +116,56 @@ async def call_llm(user_message: str) -> str:
                 raise ValueError(f"API error ({response.status_code}): {error_text}")
 
             result = response.json()
-            logger.info(f"Raw response: {result}")
+            logger.info(f"Исходный ответ: {result}")
 
-            # Parse OpenAI-compatible response format
-            # Response structure: {"choices": [{"message": {"content": "..."}}]}
+            # Парсинг ответа в OpenAI-совместимом формате
+            # Структура ответа: {"choices": [{"message": {"content": "..."}}]}
             if "choices" in result and len(result["choices"]) > 0:
                 generated_text = result["choices"][0]["message"]["content"]
             else:
-                # Fallback for unexpected format
-                logger.warning(f"Unexpected response format: {result}")
+                # Запасной вариант для неожиданного формата
+                logger.warning(f"Неожиданный формат ответа: {result}")
                 generated_text = str(result)
 
-            logger.info("Response generated successfully")
+            logger.info("Ответ успешно сгенерирован")
             return generated_text.strip()
 
     except httpx.TimeoutException:
-        logger.error("Request timeout")
-        raise ValueError("Request timed out. The model may be loading. Please try again.")
+        logger.error("Превышено время ожидания запроса")
+        raise ValueError("Превышено время ожидания запроса. Модель может загружаться. Попробуйте снова.")
 
     except ValueError:
-        # Re-raise ValueError (our custom errors)
+        # Повторный вброс ValueError (наши пользовательские ошибки)
         raise
 
     except Exception as e:
         import traceback
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Неожиданная ошибка: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
-        raise ValueError(f"An unexpected error occurred: {str(e)}")
+        raise ValueError(f"Произошла неожиданная ошибка: {str(e)}")
 
 
-# ==================== ENDPOINTS ====================
+# ==================== ЭНДПОИНТЫ ====================
 
 @app.get("/")
 def read_root():
-    """Serve the chat UI"""
+    """Отдача UI интерфейса чата"""
     return FileResponse("static/index.html")
 
 
 @app.get("/hello")
 def hello():
-    """Test endpoint to verify server is running"""
+    """Тестовый эндпоинт для проверки работы сервера"""
     return {"message": "Hello, World!"}
 
 
 @app.get("/test-api")
 async def test_api():
     """
-    Test endpoint to verify Hugging Face connection works.
-    Visit: http://localhost:8000/test-api
+    Тестовый эндпоинт для проверки соединения с Hugging Face.
+    Посетите: http://localhost:8000/test-api
 
-    This is helpful for debugging - it tells you exactly what's wrong!
+    Это полезно для отладки - он точно покажет, что не так!
     """
     try:
         result = await call_llm("Say hello!")
@@ -177,16 +177,16 @@ async def test_api():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
-    Chat endpoint — receives user messages and returns LLM responses.
+    Эндпоинт чата — принимает сообщения пользователя и возвращает ответы LLM.
     """
     try:
         llm_response = await call_llm(request.message)
         return ChatResponse(response=llm_response)
 
     except ValueError as e:
-        # Return user-friendly error message in the chat
+        # Возврат понятного пользователю сообщения об ошибке в чат
         return ChatResponse(response=str(e))
 
     except Exception as e:
-        logger.error(f"Unexpected error in chat endpoint: {e}")
-        return ChatResponse(response="An unexpected error occurred. Please try again.")
+        logger.error(f"Неожиданная ошибка в эндпоинте чата: {e}")
+        return ChatResponse(response="Произошла неожиданная ошибка. Попробуйте снова.")

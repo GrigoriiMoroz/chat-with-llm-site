@@ -1,11 +1,11 @@
-/* Reset default browser styles */
+/* Сброс стандартных стилей браузера */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* Body styling */
+/* Стилизация body */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -16,7 +16,7 @@ body {
     padding: 20px;
 }
 
-/* Main chat container */
+/* Главный контейнер чата */
 .chat-container {
     background: white;
     width: 100%;
@@ -29,7 +29,7 @@ body {
     overflow: hidden;
 }
 
-/* Header */
+/* Заголовок */
 .header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -47,7 +47,7 @@ body {
     opacity: 0.9;
 }
 
-/* Messages area */
+/* Область сообщений */
 .messages {
     flex: 1;
     padding: 20px;
@@ -55,7 +55,7 @@ body {
     background: #f5f5f5;
 }
 
-/* Individual message */
+/* Отдельное сообщение */
 .message {
     margin-bottom: 15px;
     padding: 12px 15px;
@@ -64,7 +64,7 @@ body {
     max-width: 80%;
 }
 
-/* User message */
+/* Сообщение пользователя */
 .user-message {
     background: #667eea;
     color: white;
@@ -72,14 +72,14 @@ body {
     text-align: right;
 }
 
-/* Bot message */
+/* Сообщение бота */
 .bot-message {
     background: white;
     color: #333;
     border: 1px solid #e0e0e0;
 }
 
-/* Input area */
+/* Область ввода */
 .input-container {
     display: flex;
     padding: 20px;
