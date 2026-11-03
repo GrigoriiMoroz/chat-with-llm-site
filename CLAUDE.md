@@ -73,7 +73,7 @@ LLM
 
 ## Environment Setup
 
-This is a Python 3.14 project with a virtual environment.
+This is a Python 3.12 project with a virtual environment.
 
 **Activate the virtual environment:**
 ```bash
