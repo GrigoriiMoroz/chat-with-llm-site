@@ -66,6 +66,9 @@ async function sendMessage() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...(document.getElementById('access-key').value
+                    ? {Authorization: `Bearer ${document.getElementById('access-key').value}`}
+                    : {}),
             },
             body: JSON.stringify({ message: message }),
         });
