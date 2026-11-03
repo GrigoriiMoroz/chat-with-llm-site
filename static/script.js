@@ -26,7 +26,11 @@ function addMessage(content, isUser) {
     if (isUser) {
         messageDiv.textContent = content;
     } else {
-        messageDiv.innerHTML = `<strong>Assistant:</strong> ${content}`;
+        // Ответ модели считаем обычным текстом, чтобы HTML не выполнялся.
+        const label = document.createElement('strong');
+        label.textContent = 'Assistant:';
+        messageDiv.appendChild(label);
+        messageDiv.appendChild(document.createTextNode(` ${content}`));
     }
 
     // Добавляем сообщение в контейнер сообщений
