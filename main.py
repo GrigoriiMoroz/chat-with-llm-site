@@ -1,6 +1,8 @@
 import os
 import logging
 import httpx
+from pydantic import Field, field_validator, model_validator
+from typing import Literal
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -40,7 +42,34 @@ app.mount(
 
 # ==================== МОДЕЛИ ДАННЫХ ====================
 
-class ChatRequest(BaseModel):
+class HistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def nonblank(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+        return value
+
+
+class ConversationContext(BaseModel):
+    history: list[HistoryMessage] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_history(self):
+        if len(self.history) % 2:
+            raise ValueError("History must contain complete exchanges")
+        for index, message in enumerate(self.history):
+            if message.role != ("user" if index % 2 == 0 else "assistant"):
+                raise ValueError("History roles must alternate")
+        if sum(len(m.content) for m in self.history) > 16000:
+            raise ValueError("History is too long")
+        return self
+
+
+class ChatRequest(ConversationContext):
     """Модель для входящего запроса чата"""
     message: str
 
@@ -61,7 +90,7 @@ class LLMError(Exception):
         super().__init__(message)
 
 
-async def call_llm(user_message: str) -> str:
+async def call_llm(user_message: str, history: list[HistoryMessage] | None = None) -> str:
     """
     Генерация ответа с использованием Hugging Face Inference API.
 
@@ -84,7 +113,7 @@ async def call_llm(user_message: str) -> str:
     # Формат, совместимый с OpenAI
     payload = {
         "model": MODEL_NAME,
-        "messages": [
+        "messages": [m.model_dump() for m in (history or [])] + [
             {"role": "user", "content": user_message}
         ],
         "max_tokens": 500,
@@ -155,7 +184,7 @@ async def chat(request: ChatRequest):
     Эндпоинт чата — принимает сообщения пользователя и возвращает ответы LLM.
     """
     try:
-        llm_response = await call_llm(request.message)
+        llm_response = await call_llm(request.message, request.history)
         return ChatResponse(response=llm_response)
 
     except LLMError as e:
