@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 # ==================== НАСТРОЙКА ====================
 
@@ -42,7 +42,14 @@ app.mount(
 
 class ChatRequest(BaseModel):
     """Модель для входящего запроса чата"""
-    message: str
+    message: str = Field(min_length=1, max_length=4000)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def strip_message(cls, value):
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
 
 class ChatResponse(BaseModel):
