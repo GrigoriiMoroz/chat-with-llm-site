@@ -1,5 +1,10 @@
 import os
 import logging
+import secrets
+import time
+from collections import deque
+from fastapi import Request
+from fastapi.responses import JSONResponse
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -30,6 +35,46 @@ API_URL = "https://router.huggingface.co/v1/chat/completions"
 
 # Создание экземпляра FastAPI приложения
 app = FastAPI()
+
+# Для локального использования ключ необязателен. Для публичного запуска задайте его.
+API_ACCESS_KEY = os.getenv("API_ACCESS_KEY", "")
+RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "10"))
+RATE_LIMIT_WINDOW = 60
+MAX_RATE_LIMIT_CLIENTS = 10000
+if RATE_LIMIT_REQUESTS < 1:
+    raise ValueError("RATE_LIMIT_REQUESTS должен быть положительным")
+request_windows: dict[str, deque] = {}
+
+
+@app.middleware("http")
+async def protect_inference(request: Request, call_next):
+    if (request.method, request.url.path) not in {("POST", "/chat"), ("GET", "/test-api")}:
+        return await call_next(request)
+    if API_ACCESS_KEY and not secrets.compare_digest(
+        request.headers.get("Authorization", "").encode(),
+        ("Bearer " + API_ACCESS_KEY).encode(),
+    ):
+        return JSONResponse(status_code=401, content={"detail": {"code": "unauthorized", "message": "Нужен ключ доступа к чату."}}, headers={"WWW-Authenticate": "Bearer"})
+    now = time.monotonic()
+    # Не доверяем X-Forwarded-For: прокси настраивается отдельно на уровне ASGI-сервера.
+    client = request.client.host if request.client else "unknown"
+    for host in list(request_windows):
+        window = request_windows[host]
+        while window and window[0] <= now - RATE_LIMIT_WINDOW:
+            window.popleft()
+        if not window:
+            del request_windows[host]
+    if client not in request_windows:
+        if len(request_windows) >= MAX_RATE_LIMIT_CLIENTS:
+            return JSONResponse(status_code=503, content={"detail": {"code": "limiter_capacity", "message": "Сервис занят. Попробуйте позже."}})
+        request_windows[client] = deque()
+    window = request_windows[client]
+    if len(window) >= RATE_LIMIT_REQUESTS:
+        retry_after = max(1, int(RATE_LIMIT_WINDOW - (now - window[0])) + 1)
+        return JSONResponse(status_code=429, content={"detail": {"code": "rate_limited", "message": "Слишком много запросов. Попробуйте позже."}}, headers={"Retry-After": str(retry_after)})
+    window.append(now)
+    return await call_next(request)
+
 
 # Подключение статических файлов (HTML, CSS, JavaScript)
 app.mount(
