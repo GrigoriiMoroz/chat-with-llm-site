@@ -65,7 +65,7 @@ async def call_llm(user_message: str) -> str:
     Raises:
         ValueError: Для ошибок, отображаемых пользователю (показываются в чате)
     """
-    logger.info(f"Генерация ответа для: {user_message[:50]}...")
+    logger.info("Начата генерация ответа")
 
     headers = {
         "Authorization": f"Bearer {HUGGING_FACE_API_KEY}",
@@ -109,14 +109,10 @@ async def call_llm(user_message: str) -> str:
 
             if response.status_code != 200:
                 error_text = response.text
-                logger.error(f"API error: Status={response.status_code}, Body={error_text}")
                 logger.error(f"Request URL: {API_URL}")
-                logger.error(f"Request headers: {headers}")
-                logger.error(f"Request payload: {payload}")
                 raise ValueError(f"API error ({response.status_code}): {error_text}")
 
             result = response.json()
-            logger.info(f"Исходный ответ: {result}")
 
             # Парсинг ответа в OpenAI-совместимом формате
             # Структура ответа: {"choices": [{"message": {"content": "..."}}]}
@@ -124,7 +120,6 @@ async def call_llm(user_message: str) -> str:
                 generated_text = result["choices"][0]["message"]["content"]
             else:
                 # Запасной вариант для неожиданного формата
-                logger.warning(f"Неожиданный формат ответа: {result}")
                 generated_text = str(result)
 
             logger.info("Ответ успешно сгенерирован")
@@ -139,9 +134,6 @@ async def call_llm(user_message: str) -> str:
         raise
 
     except Exception as e:
-        import traceback
-        logger.error(f"Неожиданная ошибка: {str(e)}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
         raise ValueError(f"Произошла неожиданная ошибка: {str(e)}")
 
 
@@ -188,5 +180,4 @@ async def chat(request: ChatRequest):
         return ChatResponse(response=str(e))
 
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в эндпоинте чата: {e}")
         return ChatResponse(response="Произошла неожиданная ошибка. Попробуйте снова.")
