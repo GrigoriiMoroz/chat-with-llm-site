@@ -45,7 +45,10 @@ function addMessage(content, isUser) {
 /**
  * Отправить сообщение на backend и отобразить ответ
  */
+let isSending = false;
+
 async function sendMessage() {
+    if (isSending) return;
     // Получаем сообщение пользователя из поля ввода
     const message = userInput.value.trim();
 
@@ -60,10 +63,22 @@ async function sendMessage() {
     // Очищаем поле ввода
     userInput.value = '';
 
+    isSending = true;
+    sendButton.disabled = true;
+    userInput.disabled = true;
+    const pending = document.createElement('div');
+    pending.className = 'message bot-message';
+    pending.setAttribute('role', 'status');
+    pending.textContent = 'Ассистент отвечает…';
+    messagesContainer.appendChild(pending);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 65000);
+
     try {
         // Отправляем POST запрос на эндпоинт /chat
         const response = await fetch('/chat', {
             method: 'POST',
+            signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -84,10 +99,28 @@ async function sendMessage() {
     } catch (error) {
         // Если что-то пошло не так, показываем сообщение об ошибке
         console.error('Ошибка:', error);
+        userInput.value = message;
         addMessage(
             'Извините, что-то пошло не так. Попробуйте снова.',
             false
         );
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.textContent = 'Повторить';
+        retry.addEventListener('click', () => {
+            if (isSending) return;
+            userInput.value = message;
+            retry.remove();
+            sendMessage();
+        });
+        messagesContainer.lastElementChild.appendChild(retry);
+    } finally {
+        clearTimeout(timeout);
+        pending.remove();
+        isSending = false;
+        sendButton.disabled = false;
+        userInput.disabled = false;
+        userInput.focus();
     }
 }
 
