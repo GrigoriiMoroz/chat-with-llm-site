@@ -2,7 +2,7 @@ import os
 import logging
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -52,6 +52,15 @@ class ChatResponse(BaseModel):
 
 # ==================== ФУНКЦИЯ LLM ====================
 
+class LLMError(Exception):
+    """Безопасная ошибка провайдера, отдельно от успешного ответа."""
+    def __init__(self, status_code: int, code: str, message: str):
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+        super().__init__(message)
+
+
 async def call_llm(user_message: str) -> str:
     """
     Генерация ответа с использованием Hugging Face Inference API.
@@ -84,57 +93,31 @@ async def call_llm(user_message: str) -> str:
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            logger.info(f"Calling Hugging Face API at {API_URL}")
             response = await client.post(API_URL, headers=headers, json=payload)
-
-            logger.info(f"Response status: {response.status_code}")
-
-            if response.status_code == 503:
-                logger.warning("Model is loading")
-                raise ValueError(
-                    "⏳ The model is loading (can take 20-60 seconds on first use). "
-                    "Please try again in a moment!"
-                )
-
-            if response.status_code == 403:
-                logger.error("Access forbidden")
-                raise ValueError(
-                    f"Access denied. You may need to accept the model license at "
-                    f"https://huggingface.co/{MODEL_NAME}"
-                )
-
-            if response.status_code == 401:
-                logger.error("Authentication failed")
-                raise ValueError("Invalid or missing Hugging Face API token")
-
-            if response.status_code != 200:
-                error_text = response.text
-                logger.error(f"Request URL: {API_URL}")
-                raise ValueError(f"API error ({response.status_code}): {error_text}")
-
+        if response.status_code != 200:
+            status, code, message = {
+                401: (502, "provider_auth", "Сервис модели недоступен. Обратитесь к администратору."),
+                403: (502, "provider_access", "Сервис модели недоступен. Обратитесь к администратору."),
+                429: (429, "rate_limited", "Слишком много запросов. Попробуйте позже."),
+                503: (503, "provider_unavailable", "Модель временно недоступна. Попробуйте позже."),
+            }.get(response.status_code, (502, "provider_error", "Не удалось получить ответ модели."))
+            raise LLMError(status, code, message)
+        try:
             result = response.json()
-
-            # Парсинг ответа в OpenAI-совместимом формате
-            # Структура ответа: {"choices": [{"message": {"content": "..."}}]}
-            if "choices" in result and len(result["choices"]) > 0:
-                generated_text = result["choices"][0]["message"]["content"]
-            else:
-                # Запасной вариант для неожиданного формата
-                generated_text = str(result)
-
-            logger.info("Ответ успешно сгенерирован")
-            return generated_text.strip()
-
+            content = result["choices"][0]["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("Empty content")
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise LLMError(502, "invalid_response", "Модель вернула некорректный ответ.") from None
+        return content.strip()
     except httpx.TimeoutException:
-        logger.error("Превышено время ожидания запроса")
-        raise ValueError("Превышено время ожидания запроса. Модель может загружаться. Попробуйте снова.")
-
-    except ValueError:
-        # Повторный вброс ValueError (наши пользовательские ошибки)
+        raise LLMError(504, "provider_timeout", "Время ожидания ответа истекло. Попробуйте снова.") from None
+    except httpx.RequestError:
+        raise LLMError(502, "provider_connection", "Не удалось связаться с моделью.") from None
+    except LLMError:
         raise
-
-    except Exception as e:
-        raise ValueError(f"Произошла неожиданная ошибка: {str(e)}")
+    except Exception:
+        raise LLMError(502, "provider_error", "Не удалось получить ответ модели.") from None
 
 
 # ==================== ЭНДПОИНТЫ ====================
@@ -162,8 +145,8 @@ async def test_api():
     try:
         result = await call_llm("Say hello!")
         return {"success": True, "response": result}
-    except ValueError as e:
-        return {"success": False, "error": str(e)}
+    except LLMError as e:
+        raise HTTPException(e.status_code, detail={"code": e.code, "message": e.message}) from None
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -175,9 +158,8 @@ async def chat(request: ChatRequest):
         llm_response = await call_llm(request.message)
         return ChatResponse(response=llm_response)
 
-    except ValueError as e:
-        # Возврат понятного пользователю сообщения об ошибке в чат
-        return ChatResponse(response=str(e))
-
-    except Exception as e:
-        return ChatResponse(response="Произошла неожиданная ошибка. Попробуйте снова.")
+    except LLMError as e:
+        raise HTTPException(e.status_code, detail={"code": e.code, "message": e.message}) from None
+    except Exception:
+        logger.error("Неожиданная ошибка в эндпоинте чата")
+        raise HTTPException(500, detail={"code": "internal_error", "message": "Произошла ошибка. Попробуйте снова."}) from None

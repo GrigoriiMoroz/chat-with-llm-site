@@ -70,13 +70,13 @@ async function sendMessage() {
             body: JSON.stringify({ message: message }),
         });
 
-        // Проверяем, был ли запрос успешным
-        if (!response.ok) {
-            throw new Error(`HTTP ошибка! статус: ${response.status}`);
-        }
-
-        // Парсим JSON ответ
         const data = await response.json();
+        if (!response.ok) {
+            const message = data.detail && typeof data.detail.message === 'string'
+                ? data.detail.message
+                : 'Не удалось отправить сообщение. Попробуйте снова.';
+            throw new Error(message);
+        }
 
         // Добавляем ответ бота в UI
         addMessage(data.response, false);
@@ -85,7 +85,7 @@ async function sendMessage() {
         // Если что-то пошло не так, показываем сообщение об ошибке
         console.error('Ошибка:', error);
         addMessage(
-            'Извините, что-то пошло не так. Попробуйте снова.',
+            error.message || 'Извините, что-то пошло не так. Попробуйте снова.',
             false
         );
     }
